@@ -1,11 +1,14 @@
 #pragma once
 
 #include "Types.h"
-#include <map>
-#include <unordered_map>
+#include "RingBuffer.h"
 #include <vector>
 
 namespace exchange {
+
+struct ExecutionReport;
+
+constexpr Price MAX_PRICE = 200000;
 
 struct PriceLevel {
   Order *head = nullptr;
@@ -47,28 +50,38 @@ struct PriceLevel {
 
 class OrderBook {
 public:
-  // Returns true if the order was added to the book, false if invalid
+  OrderBook() : bids_(MAX_PRICE), asks_(MAX_PRICE) {}
+
   bool add_order(Order *order);
   void remove_order(Order *order);
 
   Order *get_best_bid();
   Order *get_best_ask();
 
-  bool has_bids() const { return !bids_.empty(); }
-  bool has_asks() const { return !asks_.empty(); }
+  bool has_bids() const { return max_bid_ > 0 || !bids_[0].is_empty(); }
+  bool has_asks() const { return min_ask_ < MAX_PRICE; }
 
-  const auto &get_bids() const { return bids_; }
-  const auto &get_asks() const { return asks_; }
+  // Try to match a taking order against the book.
+  // Fills the filled_makers vector with fully matched orders for backend cleanup.
+  // Optionally passes the market_feed to push out partial iceberg tranche executions.
+  Quantity match_taker_order(Order *taker_order, std::vector<Order*>& filled_makers, RingBuffer<ExecutionReport>* market_feed = nullptr);
 
-  // Match against existing orders. Returns filled quantity.
-  // If order acts as a taker, this reduces maker orders in the book.
-  Quantity match_taker_order(Order *order);
+  // For GUI rendering
+  std::vector<std::pair<Price, const PriceLevel*>> get_top_bids(int count) const;
+  std::vector<std::pair<Price, const PriceLevel*>> get_top_asks(int count) const;
 
 private:
-  // Reverse order for bids: highest price first
-  std::map<Price, PriceLevel, std::greater<Price>> bids_;
-  // Natural order for asks: lowest price first
-  std::map<Price, PriceLevel, std::less<Price>> asks_;
+  std::vector<PriceLevel> bids_;
+  std::vector<PriceLevel> asks_;
+  Price max_bid_ = 0;
+  Price min_ask_ = MAX_PRICE;
+
+  void inline update_max_bid(Price price) {
+    if (price > max_bid_) max_bid_ = price;
+  }
+  void inline update_min_ask(Price price) {
+    if (price < min_ask_) min_ask_ = price;
+  }
 };
 
 } // namespace exchange

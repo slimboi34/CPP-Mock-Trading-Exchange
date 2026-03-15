@@ -2,6 +2,7 @@
 
 #include "MatchingEngine.h"
 #include <vector>
+#include <deque>
 
 namespace exchange {
 
@@ -17,6 +18,7 @@ public:
 
 private:
   MatchingEngine engine_;
+  std::deque<ExecutionReport> trade_history_;
   OrderId next_order_id_ = 1;
 
   // Helper to render the actual lines in the order book

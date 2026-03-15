@@ -3,17 +3,20 @@
 #include "MemoryPool.h"
 #include "OrderBook.h"
 #include "Types.h"
-#include <unordered_map>
+#include "RingBuffer.h"
+#include <vector>
 
 namespace exchange {
 
+struct ExecutionReport;
+
 class MatchingEngine {
 public:
-  // Initialize with a given max capacity for orders to avoid dynamic allocation
+  // Initialize with a given max capacity for orders and ring buffer
   explicit MatchingEngine(size_t max_orders = 1000000);
 
   // Process a new limit order
-  void add_limit_order(OrderId id, Side side, Price price, Quantity quantity);
+  void add_limit_order(OrderId id, Side side, Price price, Quantity visible_qty, Quantity total_qty = 0);
 
   // Process a market order (matches against best price until filled or book
   // empty)
@@ -25,24 +28,19 @@ public:
   // For GUI rendering
   const OrderBook &get_order_book() const { return order_book_; }
 
+  // Access to the Market Data Feed queue
+  RingBuffer<ExecutionReport>& get_market_data_feed() { return market_feed_; }
+
 private:
   OrderBook order_book_;
   MemoryPool<Order> order_pool_;
+  RingBuffer<ExecutionReport> market_feed_;
 
-  // Fast lookup for cancellations
-  std::unordered_map<OrderId, Order *> order_map_;
+  // Fast lookup for cancellations using direct array indexing O(1)
+  std::vector<Order *> order_map_;
 
   // Helper to remove order from memory and map
   void cleanup_order(Order *order);
-
-  // Helper to clean up fully filled orders from the book after taker matches
-  // In our OrderBook implementation, fully filled maker orders are detached
-  // from the book. We need the MatchingEngine to iterate through order_map_ or
-  // return a vector of filled IDs to clean them up. A better way is: when
-  // OrderBook matches, we need to know WHICH makers were filled so
-  // MatchingEngine can deallocate them.
-
-  // Let's modify the add_limit_order to do the cleanup of filled maker orders.
 };
 
 } // namespace exchange

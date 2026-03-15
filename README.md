@@ -21,10 +21,12 @@ This project demonstrates low-latency programming techniques suitable for quanti
 
 *   ⚡ **Zero Dynamic Allocations in the Critical Path**: The engine uses a custom, statically pre-allocated `MemoryPool` that issues `Order` objects in $\mathcal{O}(1)$ time, entirely avoiding slow system calls like `new` or `malloc` when matching orders.
 *   ⚡ **$\mathcal{O}(1)$ Price Level Operations**: The order book utilizes intrusive doubly-linked lists. Order objects hold their own `prev` and `next` pointers, meaning deletions/fills at the head of a price level (Price-Time Priority) happen in constant time.
-*   ⚡ **$\mathcal{O}(1)$ Order Cancellations**: The exchange maintains a flat hash map (`std::unordered_map`) of Order IDs to memory locations. Canceled orders are snipped out of the intrusive linked lists instantly without searching through price structures.
-*   🏎️ **Google Benchmark Verified**: Limit order matches execute in **~15 microseconds** and cancellations in **~1 microsecond** in initial un-optimized map-based structures, extensible to sub-microsecond latency by migrating from `std::map` to dense arrays.
-*   🧪 **Google Test Suite**: Dedicated unit tests verifying complex edge cases like partial-fills and overlapping limits.
-*   🖥️ **Native GUI**: A high-framerate renderer built with `Dear ImGui` and `GLFW` to visualize the engine's internal state.
+*   ⚡ **$\mathcal{O}(1)$ Order Cancellations**: The exchange maintains a flat array map of Order IDs to memory locations. Canceled orders are snipped out of the intrusive linked lists instantly without searching through price structures.
+*   🧊 **Iceberg Orders (Hidden Liquidity)**: Supports orders with hidden sizes. The engine seamlessly refills the visible "peak" $\mathcal{O}(1)$ when depleted, correctly re-inserting the tranche at the tail of the price level to yield time-priority as required by real exchange rules.
+*   🔄 **Lock-Free Market Data Feed (SPSC Queue)**: Integrates a pure `std::atomic` Ring Buffer utilizing `memory_order_release` and `memory_order_acquire`. The engine pushes out `ExecutionReport`s (fills and cancels) to an external thread without ever grabbing a mutex, eliminating thread stalls in the critical path.
+*   🏎️ **Sub-Microsecond Latency**: Limits orders match in **~1.1 microseconds** (P99) and market orders in **~0.6 microseconds** (P99), verified via Google Benchmark.
+*   🧪 **Google Test Suite**: Dedicated unit tests verifying complex edge cases like partial-fills, overlapping limits, and Iceberg refill priority logic.
+*   🖥️ **Native GUI**: A high-framerate renderer built with `Dear ImGui` and `GLFW` to visualize the engine's internal state, including hidden iceberg quantities and the live SPSC execution event feed.
 
 ---
 
