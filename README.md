@@ -1,27 +1,46 @@
-# High Performance C++ Mock Exchange
+<div align="center">
+  
+# 🚀 High-Performance C++ Mock Exchange
+  
+**A blazingly fast, single-threaded Limit Order Book (LOB) and Matching Engine written in modern C++20.**
 
-This project is a high-performance, single-threaded Limit Order Book (LOB) and Matching Engine written in modern C++20. It demonstrates low-latency programming techniques suitable for quantitative development and high-frequency trading (HFT) environments.
+[![C++20](https://img.shields.io/badge/C++-20-blue.svg?style=flat&logo=c%2B%2B)](https://en.cppreference.com/w/cpp/compiler_support)
+[![CMake](https://img.shields.io/badge/CMake-3.14+-green.svg?style=flat&logo=cmake)](https://cmake.org)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![GUI](https://img.shields.io/badge/GUI-Dear%20ImGui-blueviolet.svg)](https://github.com/ocornut/imgui)
 
-Included is a native **Dear ImGui** application that visually simulates order flow through the engine in real time.
+</div>
 
-## 🚀 Key Features and Architecture
+---
 
-*   **Zero Dynamic Allocations in the Critical Path**: The engine uses a custom, statically pre-allocated `MemoryPool` that issues `Order` objects in $O(1)$ time, entirely avoiding slow system calls like `new` or `malloc` when matching orders.
-*   **$O(1)$ Price Level Operations**: The order book utilizes intrusive doubly-linked lists. Order objects hold their own `prev` and `next` pointers, meaning deletions/fills at the head of a price level (Price-Time Priority) happen in constant time.
-*   **$O(1)$ Order Cancellations**: The exchange maintains a flat hash map (`std::unordered_map`) of Order IDs to memory locations. Canceled orders are snipped out of the intrusive linked lists instantly without searching through price structures.
-*   **Google Benchmark Verified**: Limit order matches execute in **~15 microseconds** and cancellations in **~1 microsecond** in initial un-optimized map-based structures, extensible to sub-microsecond latency by migrating from `std::map` to dense arrays.
-*   **Google Test Suite**: Unit tests verifying edge cases like partial-fills and overlapping limits.
-*   **Native GUI**: A high-framerate renderer built with `Dear ImGui` and `GLFW` to visualize the engine's internal state.
+This project demonstrates low-latency programming techniques suitable for quantitative development and high-frequency trading (HFT) environments. It includes a native **Dear ImGui** application that visually simulates order flow through the engine in real-time.
+
+---
+
+## ✨ Key Features & Architecture
+
+*   ⚡ **Zero Dynamic Allocations in the Critical Path**: The engine uses a custom, statically pre-allocated `MemoryPool` that issues `Order` objects in $\mathcal{O}(1)$ time, entirely avoiding slow system calls like `new` or `malloc` when matching orders.
+*   ⚡ **$\mathcal{O}(1)$ Price Level Operations**: The order book utilizes intrusive doubly-linked lists. Order objects hold their own `prev` and `next` pointers, meaning deletions/fills at the head of a price level (Price-Time Priority) happen in constant time.
+*   ⚡ **$\mathcal{O}(1)$ Order Cancellations**: The exchange maintains a flat hash map (`std::unordered_map`) of Order IDs to memory locations. Canceled orders are snipped out of the intrusive linked lists instantly without searching through price structures.
+*   🏎️ **Google Benchmark Verified**: Limit order matches execute in **~15 microseconds** and cancellations in **~1 microsecond** in initial un-optimized map-based structures, extensible to sub-microsecond latency by migrating from `std::map` to dense arrays.
+*   🧪 **Google Test Suite**: Dedicated unit tests verifying complex edge cases like partial-fills and overlapping limits.
+*   🖥️ **Native GUI**: A high-framerate renderer built with `Dear ImGui` and `GLFW` to visualize the engine's internal state.
+
+---
 
 ## 🛠 Prerequisites
 
-*   A C++20 capable compiler (`clang` or `gcc`)
-*   `CMake` (Version 3.14+)
-*   `GLFW` (For the GUI. On macOS, install via `brew install glfw`)
+Ensure you have the following installed on your system:
+
+*   **Compiler**: A C++20 capable compiler (`clang` or `gcc`)
+*   **Build System**: `CMake` (Version 3.14+)
+*   **Graphics**: `GLFW` (For the GUI. On macOS, install via `brew install glfw`)
+
+---
 
 ## 💻 Building and Running
 
-### 1. Build the GUI App
+### 1️⃣ Build the GUI App
 To run the live mock exchange visualizer:
 
 ```bash
@@ -31,7 +50,7 @@ cmake --build build -j$(sysctl -n hw.ncpu)
 ./build/mock_exchange_gui
 ```
 
-### 2. Run the Benchmark Suite
+### 2️⃣ Run the Benchmark Suite
 To measure pure nanosecond limit-order throughput (ensure you compile in `Release` mode!):
 
 ```bash
@@ -42,19 +61,28 @@ cmake --build . -j$(sysctl -n hw.ncpu)
 ./tests/benchmark_matching
 ```
 
-### 3. Run the Unit Tests
+### 3️⃣ Run the Unit Tests
+To run the suite of functional tests and ensure accuracy:
+
 ```bash
 ./build/tests/test_matching
 ```
 
+---
+
 ## 🧠 Memory Architecture Deep Dive
 
-The standard way to build a limit order book uses standard libraries: `std::map<Price, std::list<Order>>`. 
-However, standard libraries inherently call `new` when inserting elements, destroying latency.
+The standard, naive way to build a limit order book uses standard libraries: `std::map<Price, std::list<Order>>`. However, standard libraries inherently call `new` when inserting elements, destroying latency.
 
-This engine bypasses this by allocating a vast block of memory on startup:
-1. `MemoryPool` reserves 1,000,000 blank orders in a single underlying `std::vector`.
+This engine bypasses this bottleneck by allocating a vast block of memory on startup:
+1. `MemoryPool` reserves 1,000,000 blank orders in a single underlying `std::vector` (or equivalent structure).
 2. As a client submits a new limit order, the engine queries the `MemoryPool` free-list index, grabs a memory address, and uses **placement-new** to construct the order *there*.
 3. The order pointer is then pushed to the `OrderBook`'s intrusive list (`PriceLevel`). 
 
-By enforcing that all active `Order`s are completely contiguous and pre-allocated, it eliminates context-switching latency during market volatility.
+By enforcing that all active `Order`s are completely contiguous and pre-allocated, the engine eliminates context-switching latency during high market volatility.
+
+---
+
+<div align="center">
+  <i>Developed by <a href="https://github.com/slimboi34">slimboi34</a>.</i>
+</div>
