@@ -78,11 +78,12 @@ The core objective of this mock exchange is **deterministic, ultra-low latency**
 
 The benchmarks are verified using the **Google Benchmark** suite, running on a single thread. The metrics represent the **P99 tail latency** for core exchange operations:
 
-| Operation | Latency (P99) | Description |
-| :--- | :--- | :--- |
-| **Market Order Match** | `~600 ns` (0.6 µs) | Instantly sweeping through resting liquidity. |
-| **Limit Order Add (No Match)** | `~570 ns` (0.57 µs) | Adding a new limit order to a deep price level queue. |
-| **Limit Order (Match & Refill)** | `~1150 ns` (1.15 µs) | Matching against resting liquidity, emitting an `ExecutionReport` to the Ring Buffer, and refilling an Iceberg order. |
+| Operation | Latency (P99) | Time Complexity | Description |
+| :--- | :--- | :--- | :--- |
+| **Market Order Match** | `~600 ns` (0.6 µs) | $\mathcal{O}(K)$ | Instantly sweeping through $K$ resting liquidity limit orders. |
+| **Limit Order Add (No Match)** | `~570 ns` (0.57 µs) | $\mathcal{O}(1)$ | Pre-allocating from the memory pool and appending perfectly to the tail of a price level queue. |
+| **Limit Order (Match & Refill)** | `~1150 ns` (1.15 µs) | $\mathcal{O}(K)$ | Matching against $K$ resting orders, emitting non-locking `ExecutionReport`s, and refilling an Iceberg peak in $\mathcal{O}(1)$. |
+| **Order Cancellation** | `< 1 µs` (Estimate) | $\mathcal{O}(1)$ | Direct memory array lookup via Order ID and $\mathcal{O}(1)$ intrusive list snipping without price level traversal. |
 
 > **Note**: These tests demonstrate that complex market logic (like Iceberg hidden quantities and Lock-Free Ring Buffer dispatching) can be executed without stalling the hot path, preserving sub-microsecond speeds.
 
