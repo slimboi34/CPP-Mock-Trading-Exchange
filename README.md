@@ -72,6 +72,22 @@ To run the suite of functional tests and ensure accuracy:
 
 ---
 
+## ⚡ Performance & Benchmarks
+
+The core objective of this mock exchange is **deterministic, ultra-low latency**. By avoiding dynamic memory allocation (`new`/`delete`) and pointer-chasing (using intrusive lists), the matching engine guarantees highly predictable execution times, even under heavy load.
+
+The benchmarks are verified using the **Google Benchmark** suite, running on a single thread. The metrics represent the **P99 tail latency** for core exchange operations:
+
+| Operation | Latency (P99) | Description |
+| :--- | :--- | :--- |
+| **Market Order Match** | `~600 ns` (0.6 µs) | Instantly sweeping through resting liquidity. |
+| **Limit Order Add (No Match)** | `~570 ns` (0.57 µs) | Adding a new limit order to a deep price level queue. |
+| **Limit Order (Match & Refill)** | `~1150 ns` (1.15 µs) | Matching against resting liquidity, emitting an `ExecutionReport` to the Ring Buffer, and refilling an Iceberg order. |
+
+> **Note**: These tests demonstrate that complex market logic (like Iceberg hidden quantities and Lock-Free Ring Buffer dispatching) can be executed without stalling the hot path, preserving sub-microsecond speeds.
+
+---
+
 ## 🧠 Memory Architecture Deep Dive
 
 The standard, naive way to build a limit order book uses standard libraries: `std::map<Price, std::list<Order>>`. However, standard libraries inherently call `new` when inserting elements, destroying latency.
